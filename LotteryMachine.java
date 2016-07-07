@@ -24,7 +24,7 @@ import java.util.Random;
  */
 
 public class LotteryMachine {
-	public static final int NUM_BALLS = 5; //has to be greater or equal to NUM_BALLS_DRAWN
+	public static final int NUM_BALLS = 50; //has to be greater or equal to NUM_BALLS_DRAWN
 	public static final int NUM_BALLS_DRAWN = 3;
 	public static final int DRAW_TICKET_PRICE = 10;
 	
