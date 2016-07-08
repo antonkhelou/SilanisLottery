@@ -99,7 +99,10 @@ public class LotteryMachine {
 	 * and mapping it to the firstName parameter inputing into the method, and
 	 * finally increases the prizePot.
 	 */
-	public int purchaseDraw(String firstName) throws DrawNotAvailableException{
+	public int purchaseDraw(String firstName) throws DrawNotAvailableException, InvalidFirstNameException{
+		if(firstName == null || firstName.isEmpty())
+			throw new InvalidFirstNameException();
+		
 		int drawNumber = generateRandomAvailableTicketNumber();
 		
 		tickets.put(drawNumber, firstName);

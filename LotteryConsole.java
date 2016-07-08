@@ -15,7 +15,7 @@ public class LotteryConsole {
 		try {
 			lottoMachine = new LotteryMachine();
 		} catch (InvalidWinningPercentagesException e1) {
-			System.out.println("The winning percentages do not add up to 1.0!");
+			System.out.println("Error: The winning percentages do not add up to 1.0!");
 		}
 		
 		if(lottoMachine != null){
@@ -54,7 +54,10 @@ public class LotteryConsole {
 						System.out.print(purchaseOutput);
 					} catch (DrawNotAvailableException e) {
 						System.out.println();
-						System.out.print("There are no more draws to be sold. Please wait for the next round!");
+						System.out.print("Error: There are no more draws to be sold. Please wait for the next round!");
+					} catch (InvalidFirstNameException e) {
+						System.out.println();
+						System.out.print("Error: Please enter a first name.");
 					}
 				}
 				else if(selectedOption.equals("2") || selectedOption.contains("draw")){
