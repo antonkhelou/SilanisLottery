@@ -235,6 +235,9 @@ public class LotteryMachine {
 	 * list totals to 1.0f
 	 */
 	private static boolean isPercentageListValid(List<Float> percentagesList){
+		if(percentagesList == null || percentagesList.isEmpty())
+			return false;
+		
 		float totalPercentages = 0.0f;
 		
 		for(Float prct : percentagesList){
