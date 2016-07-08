@@ -129,8 +129,11 @@ public class LotteryMachine {
 		return this.latestWinners.get(2).getFirstName();
 	}
 	
+	/*
+	 * 1-based method to get the name of the nth winner
+	 */
 	public String getLatestNthPlaceWinner(int n) {
-		return this.latestWinners.get(n).getFirstName();
+		return (n > 0 && n <= this.latestWinners.size()) ? this.latestWinners.get(n-1).getFirstName(): "N/A";
 	}
 
 	public int getLatestFirstPlaceWinnings() {
@@ -145,8 +148,11 @@ public class LotteryMachine {
 		return this.latestWinners.get(2).getWinnings();
 	}
 	
+	/*
+	 * 1-based method to get the winnings of the nth winner
+	 */
 	public int getLatestNthPlaceWinnings(int n) {
-		return this.latestWinners.get(n).getWinnings();
+		return (n > 0 && n <= this.latestWinners.size()) ? this.latestWinners.get(n-1).getWinnings(): 0;
 	}
 	
 	///////////////////////////////////PRIVATE METHODS////////////////////////////////////////////////
