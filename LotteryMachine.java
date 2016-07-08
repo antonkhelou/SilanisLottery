@@ -1,44 +1,23 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-/*
- * GENERAL COMMENTS FOR REVIEWER:
- * 
- * The main thing I am not satisfied with is the tight coupling in the implementation between
- * NUM_BALLS_DRAWN, the prize constants (i.e. FIRST_PLACE_PRCT, ...) and the instance variables
- * for the winners/winnings. This leads to an ugly implementation inside the distributePrizes() method,
- * where I have code repeat due to the fact that I have defined variables separately rather than
- * holding them all in a data structure, and applying the computation against it.
- * 
- * To elaborate, ideally, what I should have done here, is create a List that holds as many
- * "winning percentages" as the developer/lottery manager would want to use in his lottery system.
- * In parallel, I would dynamically create List that holds tuples defined by <first_name, winning>
- * and is ordered by first prize to the last prize, where winning is based on the size of the "winning percentages" 
- * list I mentioned above. "The winning percentages" list would also indicate the number of balls to be drawn
- * (no longer need the NUM_BALLS_DRAWN constant) through its .size(). I would also have to verify that
- * the total sum of the elements in the "winning percentages" list is equal to 1.0f, in order to properly 
- * distribute the current draw's prize pot.
- */
-
 public class LotteryMachine {
-	public static final int NUM_BALLS = 50; //has to be greater or equal to NUM_BALLS_DRAWN
-	public static final int NUM_BALLS_DRAWN = 3;
+	public static final int NUM_BALLS = 5;
 	public static final int DRAW_TICKET_PRICE = 10;
 	
+	//Default percentage constants for standard lottery with 3 winners used in empty constructor
 	public static final float FIRST_PLACE_PRCT = 0.75f;
 	public static final float SECOND_PLACE_PRCT = 0.15f;
 	public static final float THIRD_PLACE_PRCT = 0.1f;
+	
 	public static final float DRAW_POT_PRCT = 0.5f;
 	
 	private int prizePot;
-	
-	//The following 2 sets of instance variables will serve as holders for the lotto winners after a draw() has
-	//been executed and will maintain their state until another draw() is executed.
-	private String latestFirstPlaceWinner, latestSecondPlaceWinner, latestThirdPlaceWinner;
-	private int latestFirstPlaceWinnings, latestSecondPlaceWinnings, latestThirdPlaceWinnings;
+	private int numNumbersDrawn;
 	
 	//Map that associates ticket(draw) numbers to their buyer's first name.
 	private Map<Integer, String> tickets;
@@ -48,37 +27,54 @@ public class LotteryMachine {
 	//time generateRandomNumberRange() is called.
 	private Random rand;
 	
-	public LotteryMachine(){
+	//Holds a list of the winning percentages. The size of this list indicates the number of balls/numbers
+	//to be drawn in each draw
+	private List<Float> winningPercentages;
+	//List of tuples that contain the first name of the winner and his winnings
+	private List<LottoWinnerTuple> latestWinners;
+	
+	/*
+	 * Default constructor, uses the first, second and third place percentage constants
+	 */
+	public LotteryMachine() throws InvalidWinningPercentagesException{
+		this(new ArrayList<Float>(Arrays.asList(FIRST_PLACE_PRCT, SECOND_PLACE_PRCT, THIRD_PLACE_PRCT)));
+	}
+	
+	/*
+	 * Overloaded constructor, takes in a winningPercentages List as a parameter
+	 */
+	public LotteryMachine(List<Float> winningPercentages) throws InvalidWinningPercentagesException{
+		//checks if the percentages total up to 1.0f
+		if(!isPercentageListValid(winningPercentages))
+			throw new InvalidWinningPercentagesException();
+		
 		this.prizePot = 200;
-		
-		this.latestFirstPlaceWinner = "N/A";
-		this.latestSecondPlaceWinner = "N/A";
-		this.latestThirdPlaceWinner = "N/A";
-		
-		this.latestFirstPlaceWinnings = 0;
-		this.latestSecondPlaceWinnings = 0;
-		this.latestThirdPlaceWinnings = 0;
+		//save the size of the winningPercentages, which represents the number of balls to be drawn per draw
+		this.numNumbersDrawn = winningPercentages.size();
 		
 		this.tickets = new HashMap<Integer, String>();
-		this.latestDrawNumbers = new ArrayList<Integer>(NUM_BALLS_DRAWN);
+		this.latestDrawNumbers = new ArrayList<Integer>(winningPercentages.size());
+		this.latestWinners = new ArrayList<LottoWinnerTuple>(winningPercentages.size());
+		
+		this.winningPercentages = winningPercentages;
 		
 		this.rand = new Random();
 	}
 
 	/*
 	 * The following method implements the draw functionality for the LotteryMachine.
-	 * It generates a NUM_BALLS_DRAWN amount of random numbers which are then used to
+	 * It generates a winningPercentages.size()/numNumbersDrawn amount of random numbers which are then used to
 	 * determine who has winning tickets for the current draw. The 'latestDrawNumbers'
-	 * ArrayList holds the drawn numbers in order of 1st prize up to NUM_BALLS_DRAWNth prize.
+	 * list holds the drawn numbers in order of 1st prize up to numNumbersDrawn-th prize.
 	 */
 	public List<Integer> draw(){
 		int drawNumber;
 		int numBallsDrawn = 0;
 		
 		//Reset the drawn numbers from any previous draw()
-		this.latestDrawNumbers = new ArrayList<Integer>(NUM_BALLS_DRAWN);
+		this.latestDrawNumbers = new ArrayList<Integer>(this.numNumbersDrawn);
 		
-		//The following block ensures that NUM_BALLS amount of unique values 
+		//The following block ensures that numNumbersDrawn amount of unique values 
 		//are being randomly generated.
 		do{
 			drawNumber = generateRandomNumberRange(1, NUM_BALLS);
@@ -88,10 +84,11 @@ public class LotteryMachine {
 				numBallsDrawn++;
 			}	
 			
-		} while(numBallsDrawn < NUM_BALLS_DRAWN);
+		} while(numBallsDrawn < this.numNumbersDrawn);
 		
+		resetLatestWinners();
 		distributePrizes();
-		resetDraw();
+		resetTickets();
 		
 		return this.latestDrawNumbers;
 	}
@@ -121,27 +118,35 @@ public class LotteryMachine {
 	}
 	
 	public String getLatestFirstPlaceWinner() {
-		return latestFirstPlaceWinner;
+		return this.latestWinners.get(0).getFirstName();
 	}
 
 	public String getLatestSecondPlaceWinner() {
-		return latestSecondPlaceWinner;
+		return this.latestWinners.get(1).getFirstName();
 	}
 
 	public String getLatestThirdPlaceWinner() {
-		return latestThirdPlaceWinner;
+		return this.latestWinners.get(2).getFirstName();
+	}
+	
+	public String getLatestNthPlaceWinner(int n) {
+		return this.latestWinners.get(n).getFirstName();
 	}
 
 	public int getLatestFirstPlaceWinnings() {
-		return latestFirstPlaceWinnings;
+		return this.latestWinners.get(0).getWinnings();
 	}
 
 	public int getLatestSecondPlaceWinnings() {
-		return latestSecondPlaceWinnings;
+		return this.latestWinners.get(1).getWinnings();
 	}
 
 	public int getLatestThirdPlaceWinnings() {
-		return latestThirdPlaceWinnings;
+		return this.latestWinners.get(2).getWinnings();
+	}
+	
+	public int getLatestNthPlaceWinnings(int n) {
+		return this.latestWinners.get(n).getWinnings();
 	}
 	
 	///////////////////////////////////PRIVATE METHODS////////////////////////////////////////////////
@@ -153,47 +158,33 @@ public class LotteryMachine {
 	private void distributePrizes(){
 		//Variable used to subtract from the prizePool at the end of the method
 		int totalDrawPrize = 0;
+		
 		String tempFirstName = "";
+		int tempWinnings = 0;
 		
-		//The following repeated block of code checks if someone has a ticket of the winning number.
-		//If someone does, then it will determine his name and compute his winnings based on constants.
-		//It is tightly coupled with the prize order inside the 'latestDrawNumbers' ArrayList.
-		if((tempFirstName = tickets.get(this.latestDrawNumbers.get(0))) != null){
-			this.latestFirstPlaceWinner = tempFirstName;
-			this.latestFirstPlaceWinnings = (int) Math.ceil(this.prizePot * DRAW_POT_PRCT * FIRST_PLACE_PRCT);
-			totalDrawPrize += this.latestFirstPlaceWinnings;
-		}
-		else{
-			//set the name to "N/A" and reset the winnings to 0
-			this.latestFirstPlaceWinner = "N/A";
-			this.latestFirstPlaceWinnings = 0;
-		}
-
-		if((tempFirstName = tickets.get(this.latestDrawNumbers.get(1))) != null){
-			this.latestSecondPlaceWinner = tempFirstName;
-			this.latestSecondPlaceWinnings = (int) Math.ceil(this.prizePot * DRAW_POT_PRCT * SECOND_PLACE_PRCT);
-			totalDrawPrize += this.latestSecondPlaceWinnings;
-		}
-		else{
-			this.latestSecondPlaceWinner = "N/A";
-			this.latestSecondPlaceWinnings = 0;
-		}
-		
-		if((tempFirstName = tickets.get(this.latestDrawNumbers.get(2))) != null){
-			this.latestThirdPlaceWinner = tempFirstName;
-			this.latestThirdPlaceWinnings = (int) Math.ceil(this.prizePot * DRAW_POT_PRCT * THIRD_PLACE_PRCT);
-			totalDrawPrize += this.latestThirdPlaceWinnings;
-		}
-		else{
-			this.latestThirdPlaceWinner = "N/A";
-			this.latestThirdPlaceWinnings = 0;
+		//The following block of code loops through the latestDrawNumbers and winningPercentages
+		//lists, determines whether there is a person that has purchased a winning number and
+		//computes his/her winnings.
+		for(int i = 0; i < this.numNumbersDrawn; i++){
+			if((tempFirstName = tickets.get(this.latestDrawNumbers.get(i))) != null){
+				tempWinnings = (int) Math.ceil(this.prizePot * DRAW_POT_PRCT * this.winningPercentages.get(i));
+				this.latestWinners.add(new LottoWinnerTuple(tempFirstName, tempWinnings));
+				totalDrawPrize += tempWinnings;
+			}
+			else{
+				this.latestWinners.add(new LottoWinnerTuple("N/A", 0));
+			}
 		}
 		
 		//subtract the total distributed prize money from the pot
 		prizePot -= totalDrawPrize;
 	}
 	
-	private void resetDraw(){
+	private void resetLatestWinners(){
+		this.latestWinners = new ArrayList<LottoWinnerTuple>(this.numNumbersDrawn);
+	}
+	
+	private void resetTickets(){
 		this.tickets = new HashMap<Integer, String>();
 	}
 
@@ -228,5 +219,19 @@ public class LotteryMachine {
 	
 	private int generateRandomNumberRange(int min, int max){
 		return rand.nextInt(max) + min;
+	}
+	
+	/*
+	 * Static helper method that checks whether the total percent of the percentagesList parameter
+	 * list totals to 1.0f
+	 */
+	private static boolean isPercentageListValid(List<Float> percentagesList){
+		float totalPercentages = 0.0f;
+		
+		for(Float prct : percentagesList){
+			totalPercentages += prct;
+		}
+		
+		return (totalPercentages == 1.0f);
 	}
 }
