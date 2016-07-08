@@ -52,9 +52,9 @@ public class LotteryConsole {
 								lottoNumber);
 						
 						System.out.print(purchaseOutput);
-					} catch (DrawNotAvailableException e) {
+					} catch (TicketNotAvailableException e) {
 						System.out.println();
-						System.out.print("Error: There are no more draws to be sold. Please wait for the next round!");
+						System.out.print("Error: There are no more tickets to be sold for the current draw. Please wait for the next round!");
 					} catch (InvalidFirstNameException e) {
 						System.out.println();
 						System.out.print("Error: Please enter a first name.");
