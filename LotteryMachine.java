@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class LotteryMachine {
-	public static final int NUM_BALLS = 5;
+	public static final int NUM_BALLS = 50;
 	public static final int DRAW_TICKET_PRICE = 10;
 	
 	//Default percentage constants for standard lottery with 3 winners used in empty constructor
